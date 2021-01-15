@@ -185,7 +185,7 @@ static const JanetReg cfuns[] = {
     {"sha256-file-hash", sha256_file_hash, NULL},
     {"pkg-dependencies", pkg_dependencies, NULL},
     {"storify", storify, NULL},
-    {"primitive-unpack", primitive_unpack, NULL},
+    {"primitive-unpack2", primitive_unpack2, NULL},
     {"hash-scan", hash_scan, NULL},
     {"getgrnam", jgetgrnam, NULL},
     {"getpwnam", jgetpwnam, NULL},

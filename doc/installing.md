@@ -5,7 +5,7 @@
 Download a release from the [releases page](https://github.com/andrewchambers/hermes/releases) and extract the contents into your PATH.
 
 ```
-$ cd /home/me/bin
+$ cd ~/bin
 $ tar -xvzf ~/Downloads/hermes-$VERSION.tar.gz
 ```
 
@@ -16,30 +16,30 @@ Ensure you have a C compiler, latest janet from git, pkg-config, libbsd and liba
 Clone the source code using Git.
 
 ```
-$ git clone --recurse-submodules https://github.com/andrewchambers/hermes
+$ git clone --recurse-submodules https://github.com/andrewchambers/hermes.git
 $ cd hermes
 ```
 
 Optionally configure a project local directory for janet jpm dependencies.
 
 ```
-$ export JANET_PATH="$(pwd)/janet_modules"
-$ mkdir $JANET_PATH
+$ export JANET_PATH="${PWD}/janet_modules"
+$ mkdir -- "$JANET_PATH"
 
 ```
 
 Install janet dependencies using jpm.
 
 ```
-$ jpm load-lockfile lockfile.jdn
+$ jpm load-lockfile
 $ jpm build
 ```
 
 Once hermes and it's support programs are built, extract them to your PATH:
 
 ```
-$ cd /home/me/bin
-$ tar -xvzf $HERMES_SRC/build/hermes.tar.gz
+$ cd ~/bin
+$ tar -xvzf "${OLDPWD}/build/hermes.tar.gz"
 ```
 
 Once this is done you can optionally enable multi user mode, outlined below.
@@ -73,18 +73,18 @@ Hermes also supports a shared system package store, though to use hermes in this
 First install hermes as root:
 
 ```
-$ cd /usr/bin/
-$ sudo tar -xvzf $HERMES_SRC/build/hermes.tar.gz
-$ sudo chown root:root hermes*
+$ cd /usr/local/bin
+$ sudo tar -vxz -f "${OLDPWD}/build/hermes.tar.gz"
+$ sudo chown root:root ./hermes*
 ```
 
 Next set mark the hermes-pkgstore binary as setuid and setgid, this allows the hermes backend to
 dispatch build tasks to isolated build users and enables build sandboxing, and allows less privileged users install packages into /hpkg securely.
 
 ```
-$ sudo chmod u+s,g+s hermes-pkgstore
+$ sudo chmod +s ./hermes-pkgstore
 ```
-
+sudo cat /etc/hermes/cfg.jdn
 Now we can initialize the global package store:
 
 ```
@@ -116,8 +116,7 @@ You will also need to create user accounts for the sandbox build users,
 how to do so varies system by system, but for many users this will be sufficient:
 
 ```
-$ for i in `seq 0 9`
-do
-  sudo useradd --system --no-create-home --home /homeless hermes_build_user$i
+$ for i in $(seq 0 9); do
+  sudo useradd -rM -d /nonexistent -s /sbin/nologin "hermes_build_user${i}"
 done
 ```

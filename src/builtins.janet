@@ -18,32 +18,10 @@
   }]
   (_hermes/pkg builder name content force-refs extra-refs weak-refs))
 
-(defn- unpack
-  [archive &opt &keys {
-    :dest dest
-    :unwrap unwrap
-  }]
-  (default dest "./")
-  (default unwrap true)
-  (def archive (path/abspath archive))
-  (eprintf "unpacking %s to %s..." archive dest)
-  (unless (os/stat dest)
-    (os/mkdir dest))
-  (def start-dir (os/cwd))
-  (defer (os/cd start-dir)
-    (os/cd dest)
-    (_hermes/primitive-unpack archive)
-    (when unwrap
-      (def ents (os/dir "./"))
-      (when (and
-              (= (length ents) 1)
-              (= :directory ((os/stat (string "./" (first ents))) :mode)))
-        (def d (first ents))
-        (os/rename d ".hermes.unpack.tmp")
-        (each child (os/dir ".hermes.unpack.tmp")
-          (os/rename (string "./.hermes.unpack.tmp/" child) child))
-        (os/rmdir ".hermes.unpack.tmp"))))
-  nil)
+(defn unpack2
+  [archive]
+  (eprintf "unpacking %s" archive)
+  (_hermes/primitive-unpack2 archive))
 
 (def *content-map* @{})
 
@@ -90,7 +68,7 @@
       (symbol? path)
         (string path)
       (error "path must be a string or symbol")))
-  
+
   (when (path/abspath? path)
     (error "path must be a relative path"))
 
@@ -98,9 +76,9 @@
            url-scheme (parsed-url :scheme)
            url-host (parsed-url :host)
            url-path (parsed-url :path)]
-      (do 
+      (do
         (def url (string url-scheme "://" url-host (path/join url-path path)))
-        (default hash 
+        (default hash
           (with [tmpf (file/temp)]
             (match (download/download url |(file/write tmpf $))
               :ok
@@ -133,7 +111,7 @@
 (put hermes-env 'fetch* @{:value fetch/fetch*})
 (put hermes-env 'local-file  @{:value local-file :macro true})
 (put hermes-env 'local-file* @{:value local-file*})
-(put hermes-env 'unpack @{:value unpack})
+(put hermes-env 'unpack2 @{:value unpack2})
 (put hermes-env 'sh/run* @{:value sh/run*})
 (put hermes-env 'sh/$*   @{:value sh/$*})
 (put hermes-env 'sh/$<*  @{:value sh/$<*})
