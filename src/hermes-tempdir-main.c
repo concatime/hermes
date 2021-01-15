@@ -88,7 +88,7 @@ int main()
         die("sigaction");
     }
 
-    char template[] = "/tmp/hermes-tmpdir.XXXXXX";
+    char template[] = "/tmp/hermes/tmpdir.XXXXXX";
     char *dir_name = mkdtemp(template);
     if (!dir_name) {
         die("mkdtemp");

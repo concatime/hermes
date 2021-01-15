@@ -31,13 +31,13 @@
 
 ### End of user config
 
-(def *lib-archive-cflags*
+(def *lib-zlib-cflags*
   (shlex/split
-    (sh/$<_ pkg-config --cflags ;(if *static-build* ['--static] []) libarchive)))
+    (sh/$<_ pkg-config --cflags ;(if *static-build* ['--static] []) zlib)))
 
-(def *lib-archive-lflags*
+(def *lib-zlib-lflags*
   (shlex/split
-    (sh/$<_ pkg-config --libs ;(if *static-build* ['--static] []) libarchive)))
+    (sh/$<_ pkg-config --libs ;(if *static-build* ['--static] []) zlib)))
 
 (defn src-file?
   [path]
@@ -81,7 +81,7 @@
   (def out (string "build/" name))
   (rule out src
     (sh/$
-      (or (os/getenv "CC") "gcc")
+      (or (os/getenv "CC") "cc")
       ;extra-cflags
       ;(if *static-build* ["--static"] [])
       ;src
@@ -98,12 +98,6 @@
 (declare-simple-c-prog
   :name "hermes-namespace-container"
   :src ["src/hermes-namespace-container-main.c"])
-
-(declare-simple-c-prog
-  :name "hermes-minitar"
-  :src ["src/hermes-minitar-main.c"]
-  :extra-cflags *lib-archive-cflags*
-  :extra-lflags *lib-archive-lflags*)
 
 (declare-native
   :name "_hermes"
@@ -122,32 +116,37 @@
            "src/base16.c"
            "src/storify.c"
            "src/os.c"
-           "src/unpack.c"
+           "src/unpack2.c"
+           "src/tar.c"
+           "src/z.c"
+           "src/common/err_.c"
+           "src/common/strcpy_v.c"
+           "src/common/strcpy_vv.c"
            "src/fts.c"]
-  :cflags [;*lib-archive-cflags*]
-  :lflags [;*lib-archive-lflags*])
+  :cflags ["-std=c99" "-D" "_POSIX_C_SOURCE=200809L" ;*lib-zlib-cflags*]
+  :lflags [;*lib-zlib-lflags*])
 
 
 (declare-executable
   :name "hermes"
   :entry "src/hermes-main.janet"
-  :lflags [;*lib-archive-lflags*
+  :lflags [;*lib-zlib-lflags*
            ;(if *static-build* ["-static"] [])]
   :deps hermes-src)
 
 (declare-executable
   :name "hermes-pkgstore"
   :entry "src/hermes-pkgstore-main.janet"
-  :cflags [;*lib-archive-cflags*]
+  :cflags ["-std=c99"]
   :lflags [;(if *static-build* ["-static"] [])
-           ;*lib-archive-lflags*]
+           ;*lib-zlib-lflags*]
   :deps hermes-src)
 
 (declare-executable
   :name "hermes-builder"
   :entry "src/hermes-builder-main.janet"
   :lflags [;(if *static-build* ["-static"] [])
-           ;*lib-archive-lflags*]
+           ;*lib-zlib-lflags*]
   :deps hermes-src)
 
 (each bin ["hermes" "hermes-pkgstore" "hermes-builder"]
@@ -156,23 +155,14 @@
   (add-dep bin "build/_hermes.a")
   (add-dep bin "build/_hermes.meta.janet"))
 
-(def output-bins
-  ["hermes"
-   "hermes-pkgstore"
-   "hermes-builder"
-   "hermes-tempdir"
-   "hermes-signify"
-   "hermes-minitar"
-   "hermes-namespace-container"])
-
-(rule "build/hermes.tar.gz" (map |(string "build/" $) output-bins)
-  (sh/$ 
-     tar -C ./build
-     -czf build/hermes.tar.gz
-     --files-from=-
-    < [stdin (string/join output-bins "\n")]))
-
-(add-dep "build" "build/hermes.tar.gz")
+(map |(add-dep "build" $)
+  (map |(string "build/" $)
+    [ "hermes"
+      "hermes-pkgstore"
+      "hermes-builder"
+      "hermes-tempdir"
+      "hermes-signify"
+      "hermes-namespace-container" ]))
 
 (phony "clean-third-party" []
   (def wd (os/cwd))

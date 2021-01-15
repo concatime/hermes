@@ -68,7 +68,7 @@ void base16_encode(char *outbuf, char *inbuf, size_t in_length);
 
 /* unpack.c */
 
-Janet primitive_unpack(int argc, Janet *argv);
+Janet primitive_unpack2(int argc, Janet *argv);
 
 /*  scratchvec.c */
 

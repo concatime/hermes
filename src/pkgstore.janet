@@ -26,7 +26,7 @@
                       ""
                       (let [abs (path/abspath store-path)]
                         (if (= abs "/") "" abs))))
-  
+
   (def uid (_hermes/getuid))
   (def gid (_hermes/getgid))
   (def euid (_hermes/geteuid))
@@ -34,10 +34,10 @@
 
   (def cfg-path (string *store-path* "/etc/hermes/cfg.jdn"))
   (def cfg-stat (os/lstat cfg-path))
-  
+
   (unless cfg-stat
     (error (string/format "unable to open package store, %j missing" cfg-path)))
- 
+
   (set *store-config* (jdn/decode (slurp cfg-path)))
   (set *store-owner-uid* (cfg-stat :uid))
   (set *store-owner-gid* (cfg-stat :gid))
@@ -67,12 +67,12 @@
           (error "euid must be root when opening a multi-user store"))
         (unless (= egid 0)
           (error "egid must be root when opening a multi-user store"))
-        
+
         (let [user-name ((_hermes/getpwuid *store-user-uid*) :name)
               authorized-group-info (_hermes/getgrnam (get *store-config* :authorized-group "root"))]
           (unless (or (= "root" user-name)
                       (find  |(= $ user-name) (authorized-group-info :members)))
-            (error 
+            (error
               (string/format "current user %v not in the authorized group %v (see %v)"
                 user-name
                 (authorized-group-info :name)
@@ -107,10 +107,10 @@
       (sh/$ hermes-signify -G -n
                -s ,secret-key-path
                -p ,public-key-path)
-      (os/symlink 
+      (os/symlink
          (string "./signing-key-" store-id ".sec")
          (string path "/etc/hermes/signing-key.sec"))
-      (os/symlink 
+      (os/symlink
          (string "./signing-key-" store-id ".pub")
          (string path "/etc/hermes/signing-key.pub")))
 
@@ -249,7 +249,7 @@
       (each root dead-roots
         (sqlite3/eval db "delete from Roots where LinkPath = :root;" {:root root}))
       (sqlite3/eval db "commit;"))
-    
+
     (process-roots)
     (def visited (walkpkgstore/walk-store-closure root-pkg-paths))
 
@@ -305,7 +305,7 @@
               (error (string "content at " ent-path " must be a hash, got: " subcontent)))
             (hash/assert ent-path subcontent))
         (error (string "unexpected mode " (ent-st :mode) " at " ent-path)))))
-  
+
     (cond
       (string? content)
         (hash/assert base-path content)
@@ -339,7 +339,7 @@
 
 (defn- ref-scan
   [db pkg]
-  # Because package names are not fixed length, the scanner can only scan for hashes. 
+  # Because package names are not fixed length, the scanner can only scan for hashes.
   # We must reconstruct the full package path by fetching from the database.
   (def hash-set (_hermes/hash-scan *store-path* pkg @{}))
   (def refs @[])
@@ -367,7 +367,7 @@
           (merge-into (_hermes/getpwnam u)
                       @{:lock user-lock :close (fn [self] (:close (self :lock)))})
           (select-and-lock-build-user users (inc idx))))))
-  
+
   (if (= (*store-config* :mode) :multi-user)
     (let [users (get *store-config* :sandbox-build-users [])
           start-idx (mod (++ acquire-build-user-counter) (length users))]
@@ -411,11 +411,11 @@
 
   # Copy registry so we can update it as we build packages.
   (def registry (merge-into @{} builtins/registry))
-  
+
   (each p (dep-info :all-pkgs)
     # Initially all reachable packages are marked
     # so that marshalling efficiently ignores them
-    # when we don't need them. 
+    # when we don't need them.
     #
     # As we perform builds in topological build order,
     # We can remove the circular reference tag, and
@@ -443,7 +443,7 @@
             (var deps-ready true)
             (each dep (get-in dep-info [:deps pkg])
               (set deps-ready (and (build-pkg dep) deps-ready)))
-            
+
               (if-let [_ deps-ready
                        build-lock (acquire-build-lock (pkg :hash) :noblock :exclusive)]
                 (defer (flock/release build-lock)
@@ -451,7 +451,7 @@
                   # This prevents another builder from even running if the pkgstore process
                   # dies for some reason.
                   (_hermes/fd-set-cloexec (flock/fileno build-lock) false)
-                  
+
                   # After aquiring the package lock, check again that it doesn't exist.
                   # This is in case multiple builders were waiting, and another did the build.
                   (when (not (has-pkg-with-hash db (pkg :hash)))
@@ -463,15 +463,15 @@
         # as we know all it/all of it's dependencies are on disk.
         (put registry pkg nil))
       pkg-ready)
-    
-    (set run-builder 
+
+    (set run-builder
       (fn run-builder
         [build-lock pkg]
         (eprintf "building %s..." (pkg :path))
-        
+
         (when (os/stat (pkg :path))
           (_hermes/nuke-path (pkg :path)))
-        
+
         (os/mkdir (pkg :path))
 
         (with [tmpdir (tempdir/tempdir)]
@@ -482,7 +482,7 @@
             (put registry (pkg :builder) nil)
             (spit thunk-path (marshal do-build registry))
             (put registry (pkg :builder) '*pkg-noop-build*))
-          
+
           (def allow-fetch (truthy? (pkg :content)))
 
           (if (= store-mode :single-user)
@@ -495,7 +495,7 @@
                   (string (tmpdir :path) "/bad.sock")))
               # No sandbox at all for single user mode.
               # It's faster, easier to test, more lightweight.
-              (def do-build 
+              (def do-build
                 # wrapper to minimize closure over capturing.
                 (do
                   (defn make-builder [pkg-path pkg-builder build-dir fetch-socket-path parallelism]
@@ -509,7 +509,7 @@
                         (pkg-builder))))
                   (make-builder (pkg :path) (pkg :builder) build-dir fetch-socket-path parallelism)))
               (spit-do-build-thunk do-build)
-              (unless (sh/$? 
+              (unless (sh/$?
                          hermes-builder -t ,thunk-path
                          ;(if (= pkg pkg-to-debug) [] [:< :null :> [stdout stderr]]))
                 (error "builder failed")))
@@ -520,8 +520,9 @@
               (def chroot-hpkg (string chroot hpkg))
               (def chroot-tmp (string chroot "/tmp"))
               (def chroot-fetch-socket (string chroot "/tmp/fetch.sock"))
-              (def chroot-usr (string chroot "/usr/"))
+              (def chroot-usr (string chroot "/usr"))
               (def chroot-usr-bin (string chroot "/usr/bin"))
+              (def chroot-lib (string chroot "/lib"))
               (def chroot-bin (string chroot "/bin"))
               (def chroot-etc (string chroot "/etc"))
               (def chroot-var (string chroot "/var"))
@@ -531,7 +532,7 @@
               (def chroot-paths [
                 chroot chroot-hpkg chroot-usr chroot-usr-bin chroot-bin
                 chroot-etc chroot-var chroot-build chroot-tmp chroot-proc
-                chroot-dev
+                chroot-dev chroot-lib
               ])
 
               (each p chroot-paths
@@ -539,17 +540,17 @@
 
               (spit chroot-fetch-socket "")
               (spit (string chroot "/etc/passwd")
-                (string 
+                (string
                    "root:x:0:0:root:/:/bin/sh\n"
                    "builder:x:" (build-user :uid) ":" (build-user :gid) ":builder:/build:/bin/sh\n"))
               (spit (string chroot "/etc/group")
-                (string  "builder:x:" (build-user :gid) ":"))
+                (string  "builder:x:" (build-user :gid) ":\n"))
 
               # Paths that need to be owned by the build user for various reasons.
-              (each d [(pkg :path) chroot-bin chroot-usr-bin chroot-build chroot-tmp]
+              (each d [(pkg :path) chroot-bin chroot-usr-bin chroot-build chroot-etc chroot-lib chroot-tmp]
                 (_hermes/chown d (build-user :uid) (build-user :gid)))
 
-              (def do-build 
+              (def do-build
                 # wrapper to minimize closure over capturing.
                 (do
                   (defn make-builder [build-lock-fd chroot hpkg pkg-path pkg-builder parallelism build-uid build-gid allow-fetch]
@@ -582,7 +583,7 @@
               (unless (sh/$?
                         hermes-namespace-container
                         -n
-                        -- 
+                        --
                         hermes-builder -t ,thunk-path
                         ;(if (= pkg pkg-to-debug) [] [:< :null :> [stdout stderr]]))
                 (error "builder failed")))))
@@ -617,10 +618,10 @@
 
         (os/chmod (pkg :path) 8r555)
         (_hermes/sync)
-        
+
         (when (= pkg pkg-to-debug)
           (error "packages being debugged always fail"))
-        
+
         (sqlite3/eval db "insert into Pkgs(Hash, Name) Values(:hash, :name);"
           {:hash (pkg :hash) :name (pkg :name)})
       nil))
@@ -636,7 +637,7 @@
       (add-root db (pkg :path) gc-root)))))
 
     (optimistic-build-lock-cleanup)
-    
+
     nil)
 
 (defn make-tgz

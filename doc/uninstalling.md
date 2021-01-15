@@ -4,7 +4,7 @@
 
 ```
 rm /path/to/installation/bin/hermes*
-rm -rf $HERMES_STORE
+rm -Rf $HERMES_STORE
 ```
 
 ## Multi user installation:
@@ -14,7 +14,7 @@ Remove hermes files:
 ```
 $ sudo su
 # chmod -R +w /hpkg
-# rm -rf /hpkg /var/hermes /etc/hermes
+# rm -Rf /hpkg /var/hermes /etc/hermes
 # rm /path/to/installation/bin/hermes*
 ```
 
